@@ -283,6 +283,7 @@ if true
         'src/modules/sway/mode.cpp',
         'src/modules/sway/language.cpp',
         'src/modules/sway/window.cpp',
+        'src/modules/sway/workspace_group.cpp',
         'src/modules/sway/workspaces.cpp',
         'src/modules/sway/scratchpad.cpp'
     )
@@ -290,6 +291,7 @@ if true
         'man/waybar-sway-language.5.scd',
         'man/waybar-sway-mode.5.scd',
         'man/waybar-sway-scratchpad.5.scd',
+        'man/waybar-sway-workspace-group.5.scd',
         'man/waybar-sway-window.5.scd',
         'man/waybar-sway-workspaces.5.scd',
     )

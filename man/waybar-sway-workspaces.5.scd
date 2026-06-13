@@ -75,6 +75,19 @@ Addressed by *sway/workspaces*
 	default: empty ++
 	List of regular expressions. Workspaces whose name matches any of the given patterns are not shown.
 
+*workspace-groups*: ++
+	typeof: bool ++
+	default: false ++
+	If set to true, Sway grouped-workspace metadata is used. Workspace labels
+	default to the IPC _display_name_ field instead of the internal workspace
+	name, so grouped workspaces such as _work:1_ are shown as _1_.
+
+*show-active-group-only*: ++
+	typeof: bool ++
+	default: false ++
+	If set to true with *workspace-groups*, workspaces from inactive groups are
+	hidden.
+
 *persistent-workspaces*: ++
 	typeof: json (see below) ++
 	default: empty ++
@@ -141,6 +154,13 @@ warp-on-scroll: ++
 *{value}*: Name of the workspace, as defined by sway.
 
 *{name}*: Number stripped from workspace value.
+
+*{display_name}*: Group-aware display name provided by Sway, or the workspace
+name when grouped metadata is not present.
+
+*{group}*: Workspace group name provided by Sway.
+
+*{active_group}*: Current active workspace group provided by Sway.
 
 *{icon}*: Icon, as defined in *format-icons*.
 
@@ -217,6 +237,18 @@ n.b.: the list of outputs can be obtained from command line using *swaymsg -t ge
 "sway/workspaces": {
 	"format": "{index} - {name}",
 	"format-for-negative-index": "{name}"
+}
+```
+
+```
+"sway/workspace-group": {
+	"format": "{short_name}",
+	"on-click": "toggle"
+},
+"sway/workspaces": {
+	"workspace-groups": true,
+	"show-active-group-only": true,
+	"format": "{display_name}"
 }
 ```
 

@@ -41,6 +41,27 @@ int Workspaces::windowRewritePriorityFunction(std::string const& window_rule) {
   return 0;
 }
 
+std::string Workspaces::workspaceDisplayName(const Json::Value& node) {
+  return node["display_name"].isString() ? node["display_name"].asString()
+                                         : node["name"].asString();
+}
+
+std::string Workspaces::workspaceGroup(const Json::Value& node) {
+  return node["group"].isString() ? node["group"].asString() : "";
+}
+
+std::string Workspaces::activeGroup(const std::vector<Json::Value>& workspaces) {
+  for (const auto& workspace : workspaces) {
+    if (workspace["active_group"].isString()) {
+      return workspace["active_group"].asString();
+    }
+  }
+  auto focused = std::find_if(workspaces.begin(), workspaces.end(), [](const auto& workspace) {
+    return hasFlag(workspace, "focused") && workspace["group"].isString();
+  });
+  return focused != workspaces.end() ? (*focused)["group"].asString() : "";
+}
+
 Workspaces::Workspaces(const std::string& id, const Bar& bar, const Json::Value& config)
     : AModule(config, "workspaces", id, false, !config["disable-scroll"].asBool()),
       bar_(bar),
@@ -208,6 +229,18 @@ void Workspaces::onCmd(const struct Ipc::ipc_response& res) {
               v["num"] = convertWorkspaceNameToNum(p_w_name);
               workspaces_.emplace_back(std::move(v));
             }
+          }
+        }
+
+        if (config_["workspace-groups"].asBool() && config_["show-active-group-only"].asBool()) {
+          const auto active_group = activeGroup(workspaces_);
+          if (!active_group.empty()) {
+            workspaces_.erase(std::remove_if(workspaces_.begin(), workspaces_.end(),
+                                             [&active_group](const auto& workspace) {
+                                               const auto group = workspaceGroup(workspace);
+                                               return !group.empty() && group != active_group;
+                                             }),
+                              workspaces_.end());
           }
         }
 
@@ -406,12 +439,17 @@ auto Workspaces::update() -> void {
     } else {
       button.get_style_context()->remove_class("current_output");
     }
-    std::string full_name;
-    if (!config_["disable-markup"].asBool()) {
-      full_name = g_markup_escape_text((*it)["name"].asString().c_str(), -1);
-    } else {
-      full_name = (*it)["name"].asString();
-    }
+    const bool markup = !config_["disable-markup"].asBool();
+    auto escape = [markup](const std::string& text) {
+      return markup ? Glib::Markup::escape_text(text).raw() : text;
+    };
+    const std::string internal_name = (*it)["name"].asString();
+    const std::string display_name = workspaceDisplayName(*it);
+    const std::string group = workspaceGroup(*it);
+    const std::string active_group =
+        (*it)["active_group"].isString() ? (*it)["active_group"].asString() : "";
+    std::string full_name =
+        escape(config_["workspace-groups"].asBool() ? display_name : internal_name);
 
     std::string windows = "";
     if (config_["window-rewrite"].isObject()) {
@@ -428,7 +466,7 @@ auto Workspaces::update() -> void {
         format = config_["format"].asString();
       }
 
-      auto name = trimWorkspaceName(full_name);
+      auto name = trimWorkspaceName(escape(internal_name));
       auto output = (*it)["output"].asString();
       auto icon = getIcon(full_name, *it);
       auto separated_windows =
@@ -436,7 +474,9 @@ auto Workspaces::update() -> void {
 
       full_name =
           fmt::format(fmt::runtime(format), fmt::arg("index", index), fmt::arg("name", name),
-                      fmt::arg("value", full_name), fmt::arg("output", output),
+                      fmt::arg("value", full_name), fmt::arg("display_name", escape(display_name)),
+                      fmt::arg("group", escape(group)),
+                      fmt::arg("active_group", escape(active_group)), fmt::arg("output", output),
                       fmt::arg("icon", icon), fmt::arg("windows", separated_windows));
     }
 
